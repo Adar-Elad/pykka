@@ -1,13 +1,15 @@
 from Actors.ActorManager import ManagerActor
 from Actors.ActorWorker import WorkerActor
+from Logger import Logger
 from Messages import *
 import numpy as np
 import time
 
 
 class FindDivisorsManager(ManagerActor):
-    def __init__(self):
-        super().__init__(logger_title=self.__class__.__name__)
+    def __init__(self, logger_severity):
+        super().__init__(logger_title=self.__class__.__name__,
+                         logger_severity=logger_severity)
         self.final_result = {}
         self.workers = {}
 
@@ -25,8 +27,11 @@ class FindDivisorsManager(ManagerActor):
 
 
 class FindDivisorsWorker(WorkerActor):
-    def __init__(self, worker_id, supervisor):
-        super().__init__(worker_id=worker_id, supervisor=supervisor, logger_title=f"Worker-{worker_id}")
+    def __init__(self, worker_id, supervisor, logger_severity):
+        super().__init__(worker_id=worker_id,
+                         supervisor=supervisor,
+                         logger_title=f"Worker-{worker_id}",
+                         logger_severity=logger_severity)
 
     def do_action(self, assignment):
         divisors = []
@@ -39,11 +44,14 @@ class FindDivisorsWorker(WorkerActor):
 
 if __name__ == "__main__":
     num_workers = 1000
+    logger_severity = 3
     random_numbers = np.random.randint(1000, 100000, num_workers)
 
     # ==> Creating all actors
-    manager_actor = FindDivisorsManager.start()
-    worker_actors = {i: FindDivisorsWorker.start(i, manager_actor) for i in range(num_workers)}
+    manager_actor = FindDivisorsManager.start(logger_severity=logger_severity)
+    worker_actors = {i: FindDivisorsWorker.start(worker_id=i,
+                                                 supervisor=manager_actor,
+                                                 logger_severity=logger_severity) for i in range(num_workers)}
 
     # ==> Assign workers for manager and trigger execution
     manager_actor.tell(ManagerHireMessage(manager_id=1, workers=worker_actors))
